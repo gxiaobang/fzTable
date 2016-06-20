@@ -1,8 +1,13 @@
-tableFix
-=======
+# Table 表格组件
 
-固定表格的首尾，固定前面的几列，有参数设置
-    new TableFix(elem);   // elem
+`new Table(el, options)`
+## options
+参数		|类型					|默认值			|描述
+--------|-------------|-----------|------------
+form		|String|Object|元					|联动表单查询
 
-参数配置:
-  在html的table设置属性: data-fix-column="num"  num是个大于0数字，表示固定前面的num列
+
+### 使用示例
+```javascript
+table = new Table('#wrapper');
+```
