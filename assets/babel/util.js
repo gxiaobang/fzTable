@@ -49,12 +49,14 @@ class BaseMethod {
 	// 修改设置属性
 	set(prop, value) {
 		this[ prop ] = value;
+		return this;
 	}
 	// 修改添加属性
 	add(prop, value) {
 		if (isArray(this[ prop ])) {
 			this[ prop ].push(value);
 		}
+		return this;
 	}
 
 	// 触发事件

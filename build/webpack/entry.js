@@ -243,6 +243,7 @@
 			key: 'set',
 			value: function set(prop, value) {
 				this[prop] = value;
+				return this;
 			}
 			// 修改添加属性
 	
@@ -252,6 +253,7 @@
 				if (isArray(this[prop])) {
 					this[prop].push(value);
 				}
+				return this;
 			}
 	
 			// 触发事件
@@ -897,9 +899,9 @@
 	
 	
 	var defaults = {
-		templ: '\n\t\t\t\t<section class="grid-main"></section>\n\t\t\t\t<section class="grid-freeze-head"></section>\n\t\t\t\t<section class="grid-freeze-foot"></section>\n\t\t\t\t<section class="grid-freeze-column"></section>\n\t\t',
+		templ: '\n\t\t\t\t<section class="table-main"></section>\n\t\t\t\t<section class="table-freeze-head"></section>\n\t\t\t\t<section class="table-freeze-foot"></section>\n\t\t\t\t<section class="table-freeze-column"></section>\n\t\t\t\t<section class="table-pagin"></section>\n\t\t',
 	
-		freeze: -1,
+		freeze: 0,
 		// 别名
 		alias: {
 			head: 'head',
@@ -924,6 +926,9 @@
 			_this.url = options.url;
 			_this.data = options.data;
 			_this.param = options.param;
+			_this.freeze = defaults.freeze;
+	
+			_this.loaded = false;
 			_this.setup();
 			return _this;
 		}
@@ -954,10 +959,37 @@
 		}, {
 			key: 'render',
 			value: function render(data) {
+				// this.isReady = true;
 				data = JSON.parse(data);
 				this.getKey(data[defaults.alias.head], data[defaults.alias.ignore]);
 				this.create();
-				this.update(data);
+				console.log(data);
+				this.update('\n\t\t\t\t<table class="table table-striped">\n\t\t\t\t\t' + this.htmlHead(data[defaults.alias.head]) + '\n\t\t\t\t\t' + this.htmlBody(data[defaults.alias.list]) + '\n\t\t\t\t\t' + this.htmlFoot(data[defaults.alias.total]) + '\n\t\t\t\t</table>\n\t\t\t');
+				this.setHeadCellWidth();
+				this.events();
+			}
+	
+			// 事件
+	
+		}, {
+			key: 'events',
+			value: function events() {
+				var _this3 = this;
+	
+				if (!this.loaded) {
+					this.loaded = true;
+					(0, _util.addEvent)(window, 'resize', function () {
+						_this3.rebuild();
+					});
+				}
+			}
+	
+			// 重建
+	
+		}, {
+			key: 'rebuild',
+			value: function rebuild() {
+				this.setHeadCellWidth();
 			}
 	
 			// 获取字段keys
@@ -980,20 +1012,62 @@
 	
 		}, {
 			key: 'update',
-			value: function update(data) {
-				console.log(data);
-				this.main.innerHTML = '';
-				this.main.appendChild((0, _util.parseDOM)('\n\t\t\t\t\t\t\t<table>\n\t\t\t\t\t\t\t\t' + this.htmlHead(data[defaults.alias.head]) + '\n\t\t\t\t\t\t\t\t' + this.htmlBody(data[defaults.alias.list]) + '\n\t\t\t\t\t\t\t\t' + this.htmlFoot(data[defaults.alias.total]) + '\n\t\t\t\t\t\t\t</table>\n\t\t\t\t\t\t'));
+			value: function update(html) {
+				this.main.innerHTML = html;
+				if (this.freeze > 0) {
+					this.freezeColumn = html;
+				}
+				this.table = this.main.children[0];
+				this.updateHead();
+			}
+	
+			// 更新冰冻表头
+	
+		}, {
+			key: 'updateHead',
+			value: function updateHead() {
+				var tHead = this.table.tHead,
+				    row,
+				    cell;
+	
+				var html = '';
+				for (var i = 0; row = tHead.rows[i]; i++) {
+					html += '<div class="table-freeze-row">';
+					for (var j = 0; cell = row.cells[j]; j++) {
+						html += '<div class="table-freeze-cell">';
+						html += cell.innerHTML;
+						html += '</div>';
+					}
+					html += '</div>';
+				}
+	
+				this.freezeHead.innerHTML = html;
+			}
+	
+			// 设置cell宽度
+	
+		}, {
+			key: 'setHeadCellWidth',
+			value: function setHeadCellWidth() {
+				var tHead = this.table.tHead,
+				    row,
+				    cell;
+				for (var i = 0; row = tHead.rows[i]; i++) {
+					var cells = (0, _util.$s)('.table-freeze-cell', this.freezeHead.children[i]);
+					for (var j = 0; cell = row.cells[j]; j++) {
+						cells[j].style.width = cell.offsetWidth + 'px';
+					}
+				}
 			}
 		}, {
 			key: 'create',
 			value: function create() {
-				(0, _util.addClass)(this.el, 'grid');
+				(0, _util.addClass)(this.el, 'table-freeze');
 				this.el.innerHTML = defaults.templ;
-				this.main = (0, _util.$s)('.grid-main', this.el)[0];
-				this.freezeHead = (0, _util.$s)('.grid-freeze-head', this.el)[0];
-				this.freezeFoot = (0, _util.$s)('.grid-freeze-foot', this.el)[0];
-				this.freezeColumn = (0, _util.$s)('.grid-freeze-column', this.el)[0];
+				this.main = (0, _util.$s)('.table-main', this.el)[0];
+				this.freezeHead = (0, _util.$s)('.table-freeze-head', this.el)[0];
+				this.freezeFoot = (0, _util.$s)('.table-freeze-foot', this.el)[0];
+				this.freezeColumn = (0, _util.$s)('.table-freeze-column', this.el)[0];
 			}
 	
 			// <thead>
@@ -1001,15 +1075,15 @@
 		}, {
 			key: 'htmlHead',
 			value: function htmlHead(data) {
-				var _this3 = this;
+				var _this4 = this;
 	
 				var that = this;
 				var html = '';
 				html += '<thead>';
 				data.forEach(function (item) {
 					html += '<tr>';
-					for (var i = 0; i < _this3.keys.length; i++) {
-						html += '<th>' + item[_this3.keys[i]] + '</th>';
+					for (var i = 0; i < _this4.keys.length; i++) {
+						html += '<th>' + item[_this4.keys[i]] + '</th>';
 					}
 					html += '</tr>';
 				});
@@ -1021,15 +1095,15 @@
 		}, {
 			key: 'htmlBody',
 			value: function htmlBody(data) {
-				var _this4 = this;
+				var _this5 = this;
 	
 				var that = this;
 				var html = '';
 				html += '<tbody>';
 				data.forEach(function (item) {
 					html += '<tr>';
-					for (var i = 0; i < _this4.keys.length; i++) {
-						html += '<td>' + item[_this4.keys[i]] + '</td>';
+					for (var i = 0; i < _this5.keys.length; i++) {
+						html += '<td>' + item[_this5.keys[i]] + '</td>';
 					}
 					html += '</tr>';
 				});
@@ -1041,15 +1115,15 @@
 		}, {
 			key: 'htmlFoot',
 			value: function htmlFoot(data) {
-				var _this5 = this;
+				var _this6 = this;
 	
 				var that = this;
 				var html = '';
 				html += '<tfoot>';
 				data.forEach(function (item) {
 					html += '<tr>';
-					for (var i = 0; i < _this5.keys.length; i++) {
-						html += '<th>' + item[_this5.keys[i]] + '</th>';
+					for (var i = 0; i < _this6.keys.length; i++) {
+						html += '<th>' + item[_this6.keys[i]] + '</th>';
 					}
 					html += '</tr>';
 				});

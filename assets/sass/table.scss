@@ -1,0 +1,82 @@
+/**
+ * 表格
+ */
+@import "_variables";
+@import "_mixins";
+@import "_utilities";
+
+.table {
+	width: 100%;
+	border-collapse: collapse;
+	border-space: 0;
+
+	th, td {
+		padding: 8px;
+		
+	}
+
+	> thead {
+		> tr {
+			background-color: $color-default;
+		}
+
+		th {
+			text-align: left;
+			border-bottom: $border;
+		}
+	}
+
+	> tbody {
+		td {
+			border-top: $border;
+		}
+	}
+	
+	// 条纹
+	&.table-striped {
+		> tbody {
+			> tr {
+				&:nth-child(odd) {
+					background-color: #f9f9f9;
+				}
+				&:nth-child(even) {
+					background-color: $color-default;
+				}
+			}
+		}
+	}
+	// 带边框
+	&.table-bordered {
+
+	}
+	// 鼠标悬停
+	&.table-hover {
+		> tbody {
+			> tr:hover {
+				background-color: #f5f5f5;
+			}
+		}
+	}
+}
+
+.table-freeze {
+	position: relative;
+
+	.table-freeze-head {
+		position: absolute;
+		left: 0;
+		top: 0;
+	}
+
+	.table-freeze-row {
+		white-space: nowrap;
+	}
+
+	.table-freeze-cell {
+		box-sizing: border-box;
+		display: inline-block;
+		padding: 8px;
+		font-weight: bold;
+		background-color: $color-default;
+	}
+}

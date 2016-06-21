@@ -1,20 +1,21 @@
 /**
  * 表格组件：冰冻表头、排序、筛选
  */
-import { $s, BaseMethod, parseDOM, addClass, removeClass } from './util.js';
+import { $s, BaseMethod, parseDOM, addClass, removeClass, addEvent } from './util.js';
 import Http from './http.js';
 import AsyncForm from './asyncForm.js';
 
 
 const defaults = {
 	templ: `
-				<section class="grid-main"></section>
-				<section class="grid-freeze-head"></section>
-				<section class="grid-freeze-foot"></section>
-				<section class="grid-freeze-column"></section>
+				<section class="table-main"></section>
+				<section class="table-freeze-head"></section>
+				<section class="table-freeze-foot"></section>
+				<section class="table-freeze-column"></section>
+				<section class="table-pagin"></section>
 		`,
 
-	freeze: -1,
+	freeze: 0,
 	// 别名
 	alias: {
 		head: 'head',
@@ -32,6 +33,9 @@ class Table extends BaseMethod {
 		this.url = options.url;
 		this.data = options.data;
 		this.param = options.param;
+		this.freeze = defaults.freeze;
+
+		this.loaded = false;
 		this.setup();
 	}
 	setup() {
@@ -53,10 +57,35 @@ class Table extends BaseMethod {
 	}
 	// 渲染表格
 	render(data) {
+		// this.isReady = true;
 		data = JSON.parse(data);
 		this.getKey(data[ defaults.alias.head ], data[ defaults.alias.ignore ]);
 		this.create();
-		this.update(data);
+		console.log(data);
+		this.update(`
+				<table class="table table-striped">
+					${this.htmlHead(data[ defaults.alias.head ])}
+					${this.htmlBody(data[ defaults.alias.list ])}
+					${this.htmlFoot(data[ defaults.alias.total ])}
+				</table>
+			`);
+		this.setHeadCellWidth();
+		this.events();
+	}
+
+	// 事件
+	events() {
+		if (!this.loaded) {
+			this.loaded = true;
+			addEvent(window, 'resize', () => {
+				this.rebuild();
+			});
+		}
+	}
+
+	// 重建
+	rebuild() {
+		this.setHeadCellWidth();
 	}
 	
 	// 获取字段keys
@@ -70,29 +99,53 @@ class Table extends BaseMethod {
 	}
 
 	// 刷新表格数据
-	update(data) {
-		console.log(data);
-		this.main.innerHTML = '';
-		this.main.appendChild(
-				parseDOM(
-						`
-							<table>
-								${this.htmlHead(data[ defaults.alias.head ])}
-								${this.htmlBody(data[ defaults.alias.list ])}
-								${this.htmlFoot(data[ defaults.alias.total ])}
-							</table>
-						`
-					)
-			);
+	update(html) {
+		this.main.innerHTML = html;
+		if (this.freeze > 0) {
+			this.freezeColumn = html;
+		}
+		this.table = this.main.children[0];
+		this.updateHead();
+	}
+
+	// 更新冰冻表头
+	updateHead() {
+		var tHead = this.table.tHead,
+				row, cell;
+
+		var html = '';
+		for (var i = 0; row = tHead.rows[i]; i++) {
+			html += '<div class="table-freeze-row">';
+			for (var j = 0; cell = row.cells[j]; j++) {
+				html += '<div class="table-freeze-cell">';
+				html += cell.innerHTML;
+				html += '</div>';
+			}
+			html += '</div>';
+		}
+
+		this.freezeHead.innerHTML = html;
+	}
+
+	// 设置cell宽度
+	setHeadCellWidth() {
+		var tHead = this.table.tHead,
+				row, cell;
+		for (var i = 0; row = tHead.rows[i]; i++) {
+			let cells = $s('.table-freeze-cell', this.freezeHead.children[i]);
+			for (var j = 0; cell = row.cells[j]; j++) {
+				cells[j].style.width = cell.offsetWidth + 'px';
+			}
+		}
 	}
 
 	create() {
-		addClass(this.el, 'grid');
+		addClass(this.el, 'table-freeze');
 		this.el.innerHTML = defaults.templ;
-		this.main = $s('.grid-main', this.el)[0];
-		this.freezeHead = $s('.grid-freeze-head', this.el)[0];
-		this.freezeFoot = $s('.grid-freeze-foot', this.el)[0];
-		this.freezeColumn = $s('.grid-freeze-column', this.el)[0];
+		this.main = $s('.table-main', this.el)[0];
+		this.freezeHead = $s('.table-freeze-head', this.el)[0];
+		this.freezeFoot = $s('.table-freeze-foot', this.el)[0];
+		this.freezeColumn = $s('.table-freeze-column', this.el)[0];
 	}
 
 
