@@ -911,6 +911,10 @@
 		}
 	};
 	
+	function isWindow(obj) {
+		return window == obj && window.window == obj;
+	}
+	
 	var Table = function (_BaseMethod) {
 		_inherits(Table, _BaseMethod);
 	
@@ -926,7 +930,8 @@
 			_this.url = options.url;
 			_this.data = options.data;
 			_this.param = options.param;
-			_this.freeze = defaults.freeze;
+			_this.freeze = options.freeze || defaults.freeze;
+			_this.root = (0, _util.$s)(options.root)[0] || window;
 	
 			_this.loaded = false;
 			_this.setup();
@@ -965,7 +970,8 @@
 				this.create();
 				console.log(data);
 				this.update('\n\t\t\t\t<table class="table table-striped">\n\t\t\t\t\t' + this.htmlHead(data[defaults.alias.head]) + '\n\t\t\t\t\t' + this.htmlBody(data[defaults.alias.list]) + '\n\t\t\t\t\t' + this.htmlFoot(data[defaults.alias.total]) + '\n\t\t\t\t</table>\n\t\t\t');
-				this.setHeadCellWidth();
+				this.rebuild();
+				this.setScroll();
 				this.events();
 			}
 	
@@ -981,7 +987,68 @@
 					(0, _util.addEvent)(window, 'resize', function () {
 						_this3.rebuild();
 					});
+	
+					(0, _util.addEvent)(this.root, 'scroll', function () {
+						_this3.setScroll();
+					});
 				}
+	
+				(0, _util.addEvent)(this.main, 'scroll', function () {
+					_this3.setScroll2();
+				});
+	
+				(0, _util.addEvent)(this.freezeFoot, 'scroll', function () {
+					_this3.setScroll3();
+				});
+			}
+	
+			// 设置滚动条
+	
+		}, {
+			key: 'setScroll',
+			value: function setScroll() {
+				if (isWindow(this.root)) {
+					var point = (0, _util.getPoint)(this.main);
+					var l = document.body.scrollLeft || document.documentElement.scrollLeft,
+					    t = document.body.scrollTop || document.documentElement.scrollTop;
+	
+					if (t > point.y) {
+						(0, _util.addClass)(this.freezeHead, 'fixed');
+						this.freezeHead.style.left = point.x + 'px';
+					} else {
+						(0, _util.removeClass)(this.freezeHead, 'fixed');
+						this.freezeHead.style.left = '';
+					}
+	
+					if (t < point.y + this.main.offsetHeight - document.documentElement.clientHeight) {
+						(0, _util.addClass)(this.freezeFoot, 'fixed');
+						this.freezeFoot.style.left = point.x + 'px';
+						this.freezeFoot.style.display = '';
+						this.freezeFoot.scrollLeft = this.main.scrollLeft;
+					} else {
+						(0, _util.removeClass)(this.freezeFoot, 'fixed');
+						this.freezeFoot.style.left = '';
+						this.freezeFoot.style.display = 'none';
+					}
+				} else {}
+			}
+	
+			// 横向滚动条
+	
+		}, {
+			key: 'setScroll2',
+			value: function setScroll2() {
+				for (var i = 0; i < this.freezeHead.children.length; i++) {
+					this.freezeHead.children[0].style.marginLeft = -this.main.scrollLeft + 'px';
+				}
+			}
+	
+			// 固定滚动条
+	
+		}, {
+			key: 'setScroll3',
+			value: function setScroll3() {
+				this.main.scrollLeft = this.freezeFoot.scrollLeft;
 			}
 	
 			// 重建
@@ -990,6 +1057,8 @@
 			key: 'rebuild',
 			value: function rebuild() {
 				this.setHeadCellWidth();
+				this.setFootCellWidth();
+				this.freezeHead.style.width = this.freezeFoot.style.width = this.main.offsetWidth + 'px';
 			}
 	
 			// 获取字段keys
@@ -1044,19 +1113,39 @@
 				this.freezeHead.innerHTML = html;
 			}
 	
-			// 设置cell宽度
+			// 设置tHead cell宽度
 	
 		}, {
 			key: 'setHeadCellWidth',
 			value: function setHeadCellWidth() {
 				var tHead = this.table.tHead,
-				    row,
-				    cell;
+				    row = void 0,
+				    cell = void 0;
 				for (var i = 0; row = tHead.rows[i]; i++) {
 					var cells = (0, _util.$s)('.table-freeze-cell', this.freezeHead.children[i]);
 					for (var j = 0; cell = row.cells[j]; j++) {
 						cells[j].style.width = cell.offsetWidth + 'px';
 					}
+				}
+			}
+			// 设置tFoot cell宽度
+	
+		}, {
+			key: 'setFootCellWidth',
+			value: function setFootCellWidth() {
+				var tFoot = this.table.tFoot,
+				    row = void 0,
+				    cell = void 0;
+	
+				if (tFoot.rows.length) {
+					for (var i = 0; row = tFoot.rows[i]; i++) {
+						var cells = (0, _util.$s)('.table-freeze-cell', this.freezeFoot.children[i]);
+						for (var j = 0; cell = row.cells[j]; j++) {
+							cells[j].style.width = cell.offsetWidth + 'px';
+						}
+					}
+				} else {
+					this.freezeFoot.innerHTML = '<div style="width: ' + this.table.offsetWidth + 'px; height: 1px;"></div>';
 				}
 			}
 		}, {

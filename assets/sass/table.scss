@@ -12,7 +12,7 @@
 
 	th, td {
 		padding: 8px;
-		
+		white-space: nowrap;
 	}
 
 	> thead {
@@ -62,20 +62,50 @@
 .table-freeze {
 	position: relative;
 
+	.table-main {
+		overflow: auto;
+	}
+
 	.table-freeze-head {
 		position: absolute;
 		left: 0;
 		top: 0;
+		overflow: hidden;
+
+		&.fixed {
+			top: 0;
+		}
+
+		.table-freeze-cell {
+			border-bottom: $border;
+		}
+	}
+
+	.table-freeze-foot {
+		overflow: auto;
+
+		&.fixed {
+			bottom: 0;
+		}
 	}
 
 	.table-freeze-row {
 		white-space: nowrap;
+
+		&.fixed {
+			bottom: 0;
+		}
+	}
+
+	.fixed {
+		position: fixed !important;
 	}
 
 	.table-freeze-cell {
 		box-sizing: border-box;
 		display: inline-block;
 		padding: 8px;
+		white-space: nowrap;
 		font-weight: bold;
 		background-color: $color-default;
 	}

@@ -1,7 +1,7 @@
 /**
  * 表格组件：冰冻表头、排序、筛选
  */
-import { $s, BaseMethod, parseDOM, addClass, removeClass, addEvent } from './util.js';
+import { $s, BaseMethod, parseDOM, addClass, removeClass, addEvent, getPoint } from './util.js';
 import Http from './http.js';
 import AsyncForm from './asyncForm.js';
 
@@ -25,6 +25,10 @@ const defaults = {
 	}
 };
 
+function isWindow(obj) {
+	return window == obj && window.window == obj;
+}
+
 class Table extends BaseMethod {
 	constructor(el, options = {}) {
 		super();
@@ -33,7 +37,8 @@ class Table extends BaseMethod {
 		this.url = options.url;
 		this.data = options.data;
 		this.param = options.param;
-		this.freeze = defaults.freeze;
+		this.freeze = options.freeze || defaults.freeze;
+		this.root = $s(options.root)[0] || window;
 
 		this.loaded = false;
 		this.setup();
@@ -69,7 +74,8 @@ class Table extends BaseMethod {
 					${this.htmlFoot(data[ defaults.alias.total ])}
 				</table>
 			`);
-		this.setHeadCellWidth();
+		this.rebuild();
+		this.setScroll();
 		this.events();
 	}
 
@@ -80,12 +86,73 @@ class Table extends BaseMethod {
 			addEvent(window, 'resize', () => {
 				this.rebuild();
 			});
+
+			addEvent(this.root, 'scroll', () => {
+				this.setScroll();
+			});
 		}
+
+		addEvent(this.main, 'scroll', () => {
+			this.setScroll2();
+		});
+
+		addEvent(this.freezeFoot, 'scroll', () => {
+			this.setScroll3();
+		});
+	}
+
+	// 设置滚动条
+	setScroll() {
+		if (isWindow(this.root)) {
+			let point = getPoint(this.main);
+			let l = document.body.scrollLeft || document.documentElement.scrollLeft,
+					t = document.body.scrollTop || document.documentElement.scrollTop;
+
+			if (t > point.y) {
+				addClass(this.freezeHead, 'fixed');
+				this.freezeHead.style.left = point.x + 'px';
+			}
+			else {
+				removeClass(this.freezeHead, 'fixed');
+				this.freezeHead.style.left = '';
+			}
+
+			if (t < point.y + this.main.offsetHeight - document.documentElement.clientHeight) {
+				addClass(this.freezeFoot, 'fixed');
+				this.freezeFoot.style.left = point.x + 'px';
+				this.freezeFoot.style.display = '';
+				this.freezeFoot.scrollLeft = this.main.scrollLeft;
+			}
+			else {
+				removeClass(this.freezeFoot, 'fixed');
+				this.freezeFoot.style.left = '';
+				this.freezeFoot.style.display = 'none';
+			}
+		}
+		else {
+
+		}
+	}
+
+	// 横向滚动条
+	setScroll2() {
+		for (let i = 0; i < this.freezeHead.children.length; i++) {
+			this.freezeHead.children[0].style.marginLeft = -this.main.scrollLeft + 'px';
+		}
+	}
+
+	// 固定滚动条
+	setScroll3() {
+		this.main.scrollLeft = this.freezeFoot.scrollLeft;
 	}
 
 	// 重建
 	rebuild() {
 		this.setHeadCellWidth();
+		this.setFootCellWidth();
+		this.freezeHead.style.width = 
+			this.freezeFoot.style.width = 
+				this.main.offsetWidth + 'px';
 	}
 	
 	// 获取字段keys
@@ -127,17 +194,35 @@ class Table extends BaseMethod {
 		this.freezeHead.innerHTML = html;
 	}
 
-	// 设置cell宽度
+	// 设置tHead cell宽度
 	setHeadCellWidth() {
-		var tHead = this.table.tHead,
+		let tHead = this.table.tHead,
 				row, cell;
-		for (var i = 0; row = tHead.rows[i]; i++) {
+		for (let i = 0; row = tHead.rows[i]; i++) {
 			let cells = $s('.table-freeze-cell', this.freezeHead.children[i]);
-			for (var j = 0; cell = row.cells[j]; j++) {
+			for (let j = 0; cell = row.cells[j]; j++) {
 				cells[j].style.width = cell.offsetWidth + 'px';
 			}
 		}
 	}
+	// 设置tFoot cell宽度
+	setFootCellWidth() {
+		let tFoot = this.table.tFoot,
+				row, cell;
+
+		if (tFoot.rows.length) {
+			for (let i = 0; row = tFoot.rows[i]; i++) {
+				let cells = $s('.table-freeze-cell', this.freezeFoot.children[i]);
+				for (let j = 0; cell = row.cells[j]; j++) {
+					cells[j].style.width = cell.offsetWidth + 'px';
+				}
+			}
+		}
+		else {
+			this.freezeFoot.innerHTML = `<div style="width: ${this.table.offsetWidth}px; height: 1px;"></div>`;
+		}
+	}
+
 
 	create() {
 		addClass(this.el, 'table-freeze');
